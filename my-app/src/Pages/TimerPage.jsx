@@ -25,6 +25,7 @@ export default function TimerPage() {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [songName, setSongName] = useState(playlist[0]?.name || 'No song loaded');
   const [loopTrack, setLoopTrack] = useState(true);
+  const [audioError, setAudioError] = useState('');
 
   // Load default timer on component mount and when localStorage changes
   useEffect(() => {
@@ -99,7 +100,10 @@ export default function TimerPage() {
   const handlePausePlay = () => {
     setIsRunning(prev => !prev);
     if (!isPlaying) {
-      audioService.play().catch(()=>{});
+      audioService.play().catch(err => {
+        console.error('Play failed', err);
+        setAudioError(err && err.message ? err.message : 'Playback blocked by browser');
+      });
       setIsPlaying(true);
     } else {
       audioService.pause();
@@ -158,7 +162,10 @@ export default function TimerPage() {
 
   const toggleMusic = () => {
     if (!isPlaying) {
-      audioService.play().catch(()=>{});
+      audioService.play().catch(err => {
+        console.error('Play failed', err);
+        setAudioError(err && err.message ? err.message : 'Playback blocked by browser');
+      });
       setIsPlaying(true);
     } else {
       audioService.pause();
