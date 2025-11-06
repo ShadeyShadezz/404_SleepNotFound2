@@ -5,6 +5,7 @@ import TasksPage from './Pages/TasksPage';
 import ProfilePage from './Pages/ProfilePage';
 import HomeworkHelpPage from './Pages/HomeworkHelpPage';
 import Navigation from './components/Navigation';
+import VolumeControl from './components/VolumeControl';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/homework-help" element={<HomeworkHelpPage />} />
         </Routes>
+        <VolumeControl />
         <Navigation />
       </div>
     </Router>

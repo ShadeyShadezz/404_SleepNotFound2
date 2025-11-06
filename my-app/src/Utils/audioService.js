@@ -8,6 +8,7 @@ const audioService = (() => {
   let currentIndex = 0;
   const listeners = {};
   const fadeMs = 120; // crossfade duration in ms
+  let volume = 0.7; // Default volume at 70%
 
   function ensure() {
     if (audioEls) return audioEls;
@@ -81,6 +82,16 @@ const audioService = (() => {
     audioEls.forEach(el => el.loop = !!v);
   }
 
+  function setVolume(v) {
+    volume = Math.max(0, Math.min(1, v));
+    ensure();
+    audioEls.forEach(el => el.volume = volume);
+  }
+
+  function getVolume() {
+    return volume;
+  }
+
   function setTrack(index, play = false) {
     if (!playlist[index]) return;
     ensure();
@@ -101,7 +112,7 @@ const audioService = (() => {
     // If we have WebAudio, perform crossfade
     if (ctx && gains[active] && gains[next]) {
       const now = ctx.currentTime;
-      const fadeSec = Math.max(0.05, fadeMs / 1000);
+      const fadeSec = Math.max(0, fadeMs / 1000);
       try {
         gains[next].cancelScheduledValues(now);
         gains[active].cancelScheduledValues(now);
@@ -158,7 +169,7 @@ const audioService = (() => {
 
   function getCurrentIndex() { return currentIndex; }
 
-  return { init, play, pause, setTrack, next, prev, setLoop, on, off, getAudio, getCurrentIndex };
+  return { init, play, pause, setTrack, next, prev, setLoop, setVolume, getVolume, on, off, getAudio, getCurrentIndex };
 })();
 
 export default audioService;
