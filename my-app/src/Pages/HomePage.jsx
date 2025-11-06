@@ -14,21 +14,23 @@ export default function HomePage() {
 
   const [recentTasks, setRecentTasks] = useState(() => {
     try {
-      const raw = localStorage.getItem('recent_tasks_v1');
-      return raw ? JSON.parse(raw) : sampleTasks;
+      const raw = localStorage.getItem('tasks_v1');
+      if (raw) return JSON.parse(raw);
+      // convert sampleTasks to the shape TasksPage uses (subject, description, done)
+      return sampleTasks.map(t => ({ id: t.id, subject: t.subject, description: t.task, color: t.color, done: !!t.completed }));
     } catch {
-      return sampleTasks;
+      return sampleTasks.map(t => ({ id: t.id, subject: t.subject, description: t.task, color: t.color, done: !!t.completed }));
     }
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem('recent_tasks_v1', JSON.stringify(recentTasks));
+      localStorage.setItem('tasks_v1', JSON.stringify(recentTasks));
     } catch {}
   }, [recentTasks]);
 
   function toggleCompleted(id) {
-    setRecentTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    setRecentTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
   }
 
   return ( 
@@ -51,7 +53,7 @@ export default function HomePage() {
       {/* Dashboard Stats */}
       <div className="dashboard-grid">
         <DashboardCard title="Total tasks" value={recentTasks.length} color="#F97316" />
-        <DashboardCard title="Completed" value={recentTasks.filter(t => t.completed).length} color="#10B981" />
+        <DashboardCard title="Completed" value={recentTasks.filter(t => t.done).length} color="#10B981" />
         <DashboardCard title="Subjects" value={5} color="#3B82F6" />
       </div>
 
@@ -62,26 +64,26 @@ export default function HomePage() {
           {recentTasks.map(task => (
             <div 
               key={task.id} 
-              className={`task-item ${task.completed ? 'completed' : ''}`}
-              style={{ backgroundColor: task.color }}
+              className={`task-item ${task.done ? 'completed' : ''}`}
+              style={{ backgroundColor: task.color || '#fff' }}
             >
               <div className="task-checkbox">
                 <div
-                  className={`checkbox ${task.completed ? 'checked' : ''}`}
+                  className={`checkbox ${task.done ? 'checked' : ''}`}
                   onClick={() => toggleCompleted(task.id)}
                   role="button"
                   tabIndex={0}
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleCompleted(task.id); }}
-                  aria-pressed={task.completed}
-                  title={task.completed ? 'Mark as undone' : 'Mark as done'}
+                  aria-pressed={task.done}
+                  title={task.done ? 'Mark as undone' : 'Mark as done'}
                 >
-                  {task.completed && <span>✓</span>}
+                  {task.done && <span>✓</span>}
                 </div>
               </div>
               <div className="task-content">
                 <h3 className="task-subject">{task.subject}</h3>
-                <p className={`task-description ${task.completed ? 'strikethrough' : ''}`}>
-                  {task.task}
+                <p className={`task-description ${task.done ? 'strikethrough' : ''}`}>
+                  {task.description || 'No description'}
                 </p>
               </div>
             </div>
