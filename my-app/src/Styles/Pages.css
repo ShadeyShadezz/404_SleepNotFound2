@@ -311,16 +311,9 @@
 }
 
 .timer-input {
-  font-size: 4rem;
   font-weight: bold;
-  width: 2.2ch;
   text-align: center;
   border: none;
-  background: transparent;
-  color: #333;
-  outline: none;
-  border-bottom: 3px solid #7C3AED;
-  padding: 0;
   font-family: inherit;
 }
 
