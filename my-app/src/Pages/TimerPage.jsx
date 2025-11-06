@@ -23,8 +23,14 @@ export default function TimerPage() {
     { id: 4, name: 'Noon', url: '/Lofi3.mp3' },
   ]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [songName, setSongName] = useState(playlist[0]?.name || 'No song loaded');
+  
+  // const [songName, setSongName] = useState(playlist[0]?.name || 'No song loaded');
+  const songName = playlist[currentTrackIndex]?.name || 'No song loaded';
+
+  // Track loop state (loopTrack is a boolean)
   const [loopTrack, setLoopTrack] = useState(true);
+
+  // Error state for audio playback issues
   const [audioError, setAudioError] = useState('');
 
   // Load default timer on component mount and when localStorage changes
