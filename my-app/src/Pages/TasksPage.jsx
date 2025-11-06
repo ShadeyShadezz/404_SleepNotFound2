@@ -5,7 +5,17 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState(() => {
     try {
       const raw = localStorage.getItem("tasks_v1");
-      return raw ? JSON.parse(raw) : [];
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return parsed.map((t, i) => ({
+        id: t.id ?? Date.now() + i,
+        subject: t.subject ?? t.title ?? "Untitled",
+        description: t.description ?? t.task ?? "",
+        done: !!t.done,
+        dueDate: t.dueDate ?? null,
+        priority: t.priority ?? "Medium",
+        subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
+      }));
     } catch {
       return [];
     }
@@ -13,8 +23,11 @@ export default function TasksPage() {
 
   const [newSubject, setNewSubject] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [newPriority, setNewPriority] = useState("Medium");
+  const [newDueDate, setNewDueDate] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editValues, setEditValues] = useState({ subject: "", description: "" });
+  const [filter, setFilter] = useState("All");
 
   useEffect(() => {
     try {
@@ -37,10 +50,15 @@ export default function TasksPage() {
       subject,
       description: newDescription.trim(),
       done: false,
+      priority: newPriority,
+      dueDate: newDueDate || null,
+      subtasks: [],
     };
     setTasks(prev => [next, ...prev]);
     setNewSubject("");
     setNewDescription("");
+    setNewPriority("Medium");
+    setNewDueDate("");
   }
 
   function removeTask(id) {
@@ -58,6 +76,33 @@ export default function TasksPage() {
     setEditValues({ subject: "", description: "" });
   }
 
+  function updateTask(id, patch) {
+    setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...patch } : t)));
+  }
+
+  function addSubtask(taskId, text) {
+    if (!text) return;
+    setTasks(prev => prev.map(t => {
+      if (t.id !== taskId) return t;
+      const nextSub = { id: Date.now(), text, done: false };
+      return { ...t, subtasks: [...(t.subtasks || []), nextSub] };
+    }));
+  }
+
+  function toggleSubtask(taskId, subId) {
+    setTasks(prev => prev.map(t => {
+      if (t.id !== taskId) return t;
+      return { ...t, subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: !s.done } : s) };
+    }));
+  }
+
+  const todayISO = new Date().toISOString().slice(0,10);
+  function matchesFilter(t) {
+    if (filter === 'All') return true;
+    if (filter === 'Today') return t.dueDate === todayISO;
+    return (t.priority || 'Medium') === filter;
+  }
+
   return (
     <div className="page tasks-page">
       <div className="hero-section tasks-hero">
@@ -73,6 +118,13 @@ export default function TasksPage() {
       <section className="recent-tasks">
         <h2 className="recent-tasks-title">My Tasks</h2>
 
+        {/* Priority filter tabs */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
+          {['All','Today','High','Medium','Low'].map(p => (
+            <button key={p} onClick={() => setFilter(p)} className={`control-button ${filter === p ? 'pause-play-button' : ''}`} style={{ padding: '6px 10px', borderRadius: 20 }} aria-pressed={filter===p}>{p}</button>
+          ))}
+        </div>
+
         <form onSubmit={addTask} className="tasks-form" aria-label="Add task form">
           <input
             className="tasks-input"
@@ -81,6 +133,7 @@ export default function TasksPage() {
             onChange={e => setNewSubject(e.target.value)}
             aria-label="Task subject"
           />
+
           <input
             className="tasks-input description"
             placeholder="Short description (optional)"
@@ -88,17 +141,24 @@ export default function TasksPage() {
             onChange={e => setNewDescription(e.target.value)}
             aria-label="Task description"
           />
-          <div className="tasks-form-actions">
-            <button type="submit" className="tasks-add-button" aria-label="Add task">
-              Add
-            </button>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+            <select value={newPriority} onChange={e => setNewPriority(e.target.value)} aria-label="Priority" style={{ padding: '8px 10px', borderRadius: 8, border: '2px solid #333' }}>
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+            </select>
+            <input type="date" value={newDueDate} onChange={e => setNewDueDate(e.target.value)} aria-label="Due date" style={{ padding: '8px 10px', borderRadius: 8, border: '2px solid #333' }} />
+            <div className="tasks-form-actions" style={{ marginLeft: 'auto' }}>
+              <button type="submit" className="tasks-add-button" aria-label="Add task">Add</button>
+            </div>
           </div>
         </form>
 
         <div className="tasks-list" aria-live="polite">
           {tasks.length === 0 && <p className="tasks-empty-message">No tasks yet — add one above.</p>}
 
-          {tasks.map(task => (
+          {tasks.filter(matchesFilter).map(task => (
             <div key={task.id} className="task-item">
               <div
                 className={`checkbox ${task.done ? "checked" : ""}`}
@@ -135,32 +195,66 @@ export default function TasksPage() {
                       onChange={e => setEditValues(ev => ({ ...ev, description: e.target.value }))}
                       aria-label="Edit task description"
                     />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <select value={task.priority || 'Medium'} onChange={e => updateTask(task.id, { priority: e.target.value })} aria-label="Priority">
+                        <option>High</option>
+                        <option>Medium</option>
+                        <option>Low</option>
+                      </select>
+                      <input type="date" value={task.dueDate || ''} onChange={e => updateTask(task.id, { dueDate: e.target.value || null })} aria-label="Due date" />
+                    </div>
                   </>
                 ) : (
                   <>
-                    <p className="task-subject">{task.subject}</p>
-                    <p className={`task-description ${task.done ? "strikethrough" : ""}`}>{task.description || "No description"}</p>
-                  </>
-                )}
-              </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <p className="task-subject">{task.subject}</p>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, padding: '6px 8px', borderRadius: 12, border: '2px solid #333' }}>{task.priority || 'Medium'}</span>
+                        <input type="date" value={task.dueDate || ''} onChange={e => updateTask(task.id, { dueDate: e.target.value || null })} style={{ border: 'none', background: 'transparent' }} aria-label="Due date" />
+                      </div>
+                    </div>
 
-              <div className="task-actions">
-                {editingId === task.id ? (
-                  <>
-                    <button className="profile-save-btn" onClick={() => saveEdit(task.id)} aria-label="Save task">Save</button>
-                    <button className="profile-cancel-btn" onClick={() => setEditingId(null)} aria-label="Cancel edit">Cancel</button>
-                  </>
-                ) : (
-                  <>
-                    <button className="profile-edit-btn" title="Edit" onClick={() => startEdit(task)} aria-label={`Edit ${task.subject}`}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-                        <path d="M12 20h9" />
-                        <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
-                      </svg>
-                    </button>
-                    <button className="profile-action-btn danger task-delete-button" title="Delete" onClick={() => removeTask(task.id)} aria-label={`Delete ${task.subject}`}>
-                      Delete
-                    </button>
+                    <p className={`task-description ${task.done ? "strikethrough" : ""}`}>{task.description || "No description"}</p>
+
+                    <div style={{ marginTop: 8 }}>
+                      {(task.subtasks || []).map(s => (
+                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <div
+                            className={`checkbox ${s.done ? 'checked' : ''}`}
+                            onClick={() => toggleSubtask(task.id, s.id)}
+                            role="button"
+                            tabIndex={0}
+                            style={{ width: 20, height: 20 }}
+                          >
+                            {s.done ? '✓' : ''}
+                          </div>
+                          <div style={{ fontSize: 14, color: s.done ? '#999' : '#333', textDecoration: s.done ? 'line-through' : 'none' }}>{s.text}</div>
+                        </div>
+                      ))}
+
+                      <SubtaskAdder onAdd={(text) => addSubtask(task.id, text)} />
+                    </div>
+
+                    <div className="task-actions">
+                      {editingId === task.id ? (
+                        <>
+                          <button className="profile-save-btn" onClick={() => saveEdit(task.id)} aria-label="Save task">Save</button>
+                          <button className="profile-cancel-btn" onClick={() => setEditingId(null)} aria-label="Cancel edit">Cancel</button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="profile-edit-btn" title="Edit" onClick={() => startEdit(task)} aria-label={`Edit ${task.subject}`}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
+                            </svg>
+                          </button>
+                          <button className="profile-action-btn danger task-delete-button" title="Delete" onClick={() => removeTask(task.id)} aria-label={`Delete ${task.subject}`}>
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
@@ -169,5 +263,15 @@ export default function TasksPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function SubtaskAdder({ onAdd }) {
+  const [text, setText] = useState('');
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); if (!text.trim()) return; onAdd(text.trim()); setText(''); }} style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+      <input value={text} onChange={e => setText(e.target.value)} placeholder="Add subtask" style={{ flex: 1, padding: '6px 8px', borderRadius: 8, border: '1px solid #E5E7EB' }} />
+      <button type="submit" className="tasks-add-button" style={{ padding: '6px 10px' }}>Add</button>
+    </form>
   );
 }
