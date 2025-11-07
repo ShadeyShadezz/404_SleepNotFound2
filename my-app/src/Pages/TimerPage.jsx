@@ -23,7 +23,11 @@ export default function TimerPage() {
     { id: 4, name: 'Noon', url: '/Lofi3.mp3' },
   ]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [songName, setSongName] = useState(playlist[0]?.name || 'No song loaded');
+  
+  // const [songName, setSongName] = useState(playlist[0]?.name || 'No song loaded');
+  const songName = playlist[currentTrackIndex]?.name || 'No song loaded';
+
+  // Track loop state (loopTrack is a boolean)
   const [loopTrack, setLoopTrack] = useState(true);
   const [loopPlaylist, setLoopPlaylist] = useState(false);
 
@@ -39,6 +43,9 @@ export default function TimerPage() {
   useEffect(() => {
     loopPlaylistRef.current = loopPlaylist;
   }, [loopPlaylist]);
+
+  // Error state for audio playback issues
+  const [audioError, setAudioError] = useState('');
 
   // Load default timer on component mount and when localStorage changes
   useEffect(() => {
@@ -74,8 +81,13 @@ export default function TimerPage() {
       }
     };
     const onTrackChange = (idx) => {
+      // update current track index and sync playback info; songName is derived elsewhere
       setCurrentTrackIndex(idx);
-      setSongName(playlist[idx]?.name || '');
+      const a = audioService.getAudio();
+      if (a) {
+        setDuration(a.duration || 0);
+        setCurrentTime(a.currentTime || 0);
+      }
     };
 
     audioService.on('timeupdate', onTime);
@@ -117,7 +129,10 @@ export default function TimerPage() {
   const handlePausePlay = () => {
     setIsRunning(prev => !prev);
     if (!isPlaying) {
-      audioService.play().catch(()=>{});
+      audioService.play().catch(err => {
+        console.error('Play failed', err);
+        setAudioError(err && err.message ? err.message : 'Playback blocked by browser');
+      });
       setIsPlaying(true);
     } else {
       audioService.pause();
@@ -176,7 +191,10 @@ export default function TimerPage() {
 
   const toggleMusic = () => {
     if (!isPlaying) {
-      audioService.play().catch(()=>{});
+      audioService.play().catch(err => {
+        console.error('Play failed', err);
+        setAudioError(err && err.message ? err.message : 'Playback blocked by browser');
+      });
       setIsPlaying(true);
     } else {
       audioService.pause();
