@@ -143,12 +143,18 @@ export default function TasksPage() {
           />
 
           <div className="tasks-form-row">
-            <select className="tasks-priority-select" value={newPriority} onChange={e => setNewPriority(e.target.value)} aria-label="Priority">
-              <option>High</option>
-              <option>Medium</option>
-              <option>Low</option>
-            </select>
-            <input className="tasks-date-input" type="date" value={newDueDate} onChange={e => setNewDueDate(e.target.value)} aria-label="Due date" />
+            <div className="tasks-form-field">
+              <label className="tasks-field-label">Priority</label>
+              <select className="tasks-priority-select" value={newPriority} onChange={e => setNewPriority(e.target.value)} aria-label="Priority">
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select>
+            </div>
+            <div className="tasks-form-field">
+              <label className="tasks-field-label">End Date</label>
+              <input className="tasks-date-input" type="date" value={newDueDate} onChange={e => setNewDueDate(e.target.value)} aria-label="Due date" />
+            </div>
             <div className="tasks-form-actions">
               <button type="submit" className="tasks-add-button" aria-label="Add task">Add</button>
             </div>

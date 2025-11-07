@@ -168,14 +168,25 @@ export default function TimerPage() {
 
   const handleSecondsChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');
-    if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 59)) {
+    // Allow empty string or any number, but validate on blur
+    if (value === '' || value.length <= 2) {
       setInputSeconds(value);
     }
   };
 
-  const handleBlur = () => {
+  const handleBlur = (e) => {
+    // Only close edit mode if clicking outside the timer-edit container
+    const timerEdit = e.currentTarget.closest('.timer-edit');
+    if (timerEdit && e.relatedTarget && timerEdit.contains(e.relatedTarget)) {
+      // Focus is moving to another input within timer-edit, don't close
+      return;
+    }
+    
     const mins = inputMinutes === '' ? 0 : parseInt(inputMinutes);
-    const secs = inputSeconds === '' ? 0 : parseInt(inputSeconds);
+    let secs = inputSeconds === '' ? 0 : parseInt(inputSeconds);
+    // Clamp seconds to 0-59
+    if (secs > 59) secs = 59;
+    if (secs < 0) secs = 0;
     setMinutes(mins);
     setSeconds(secs);
     setInputMinutes(String(mins).padStart(2, '0'));
@@ -247,7 +258,7 @@ export default function TimerPage() {
           title={!isRunning ? 'Click to set time' : ''}
         >
           {isEditing ? (
-            <div className="timer-edit">
+            <div className="timer-edit" onClick={(e) => e.stopPropagation()}>
               <input
                 type="text"
                 className="timer-input"
