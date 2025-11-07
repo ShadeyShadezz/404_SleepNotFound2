@@ -29,6 +29,20 @@ export default function TimerPage() {
 
   // Track loop state (loopTrack is a boolean)
   const [loopTrack, setLoopTrack] = useState(true);
+  const [loopPlaylist, setLoopPlaylist] = useState(false);
+
+  // Use refs to track loop state without causing re-renders
+  const loopTrackRef = useRef(loopTrack);
+  const loopPlaylistRef = useRef(loopPlaylist);
+  
+  // Update refs when state changes
+  useEffect(() => {
+    loopTrackRef.current = loopTrack;
+  }, [loopTrack]);
+  
+  useEffect(() => {
+    loopPlaylistRef.current = loopPlaylist;
+  }, [loopPlaylist]);
 
   // Error state for audio playback issues
   const [audioError, setAudioError] = useState('');
@@ -56,10 +70,14 @@ export default function TimerPage() {
       setDuration(a ? a.duration : 0);
     };
     const onEnded = () => {
-      if (!loopTrack) {
-        const isLast = currentTrackIndex === playlist.length - 1;
-        if (!isLast) audioService.next();
-        else setIsPlaying(false);
+      if (!loopTrackRef.current) {
+        if (loopPlaylistRef.current) {
+          audioService.next();
+        } else {
+          const isLast = currentTrackIndex === playlist.length - 1;
+          if (!isLast) audioService.next();
+          else setIsPlaying(false);
+        }
       }
     };
     const onTrackChange = (idx) => {
@@ -83,7 +101,7 @@ export default function TimerPage() {
       audioService.off('ended', onEnded);
       audioService.off('trackchange', onTrackChange);
     };
-  }, []);
+  }, [currentTrackIndex, playlist.length]); // Removed loopTrack and loopPlaylist from dependencies
 
   // Sync loopTrack state with audioService
   useEffect(() => audioService.setLoop(loopTrack), [loopTrack]);
@@ -150,14 +168,25 @@ export default function TimerPage() {
 
   const handleSecondsChange = (e) => {
     const value = e.target.value.replace(/\D/g, '');
-    if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 59)) {
+    // Allow empty string or any number, but validate on blur
+    if (value === '' || value.length <= 2) {
       setInputSeconds(value);
     }
   };
 
-  const handleBlur = () => {
+  const handleBlur = (e) => {
+    // Only close edit mode if clicking outside the timer-edit container
+    const timerEdit = e.currentTarget.closest('.timer-edit');
+    if (timerEdit && e.relatedTarget && timerEdit.contains(e.relatedTarget)) {
+      // Focus is moving to another input within timer-edit, don't close
+      return;
+    }
+    
     const mins = inputMinutes === '' ? 0 : parseInt(inputMinutes);
-    const secs = inputSeconds === '' ? 0 : parseInt(inputSeconds);
+    let secs = inputSeconds === '' ? 0 : parseInt(inputSeconds);
+    // Clamp seconds to 0-59
+    if (secs > 59) secs = 59;
+    if (secs < 0) secs = 0;
     setMinutes(mins);
     setSeconds(secs);
     setInputMinutes(String(mins).padStart(2, '0'));
@@ -229,7 +258,7 @@ export default function TimerPage() {
           title={!isRunning ? 'Click to set time' : ''}
         >
           {isEditing ? (
-            <div className="timer-edit">
+            <div className="timer-edit" onClick={(e) => e.stopPropagation()}>
               <input
                 type="text"
                 className="timer-input"
@@ -298,6 +327,23 @@ export default function TimerPage() {
            
            <div className="music-controls">
              <button 
+               className={`music-loop-button ${loopTrack ? 'active' : ''}`}
+               onClick={() => {
+                 if (!loopTrack) {
+                   setLoopTrack(true);
+                   setLoopPlaylist(false); // Turn off playlist loop
+                 } else {
+                   setLoopTrack(false);
+                 }
+               }}
+               title={loopTrack ? 'Loop current track: On' : 'Loop current track: Off'}
+             >
+               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                 <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+               </svg>
+             </button>
+             
+             <button 
                className="music-nav-button" 
                onClick={playPrevious}
                disabled={playlist.length === 0}
@@ -335,14 +381,23 @@ export default function TimerPage() {
                  <path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z"/>
                </svg>
              </button>
-             
+
              <button 
-               className={`music-loop-button ${loopTrack ? 'active' : ''}`}
-               onClick={() => setLoopTrack(!loopTrack)}
-               title={loopTrack ? 'Loop track: On' : 'Loop track: Off'}
+               className={`music-loop-button ${loopPlaylist ? 'active' : ''}`}
+               onClick={() => {
+                 if (!loopPlaylist) {
+                   setLoopPlaylist(true);
+                   setLoopTrack(false); // Turn off single track loop
+                 } else {
+                   setLoopPlaylist(false);
+                 }
+               }}
+               title={loopPlaylist ? 'Loop playlist: On' : 'Loop playlist: Off'}
+               disabled={playlist.length === 0}
              >
                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                  <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+                 <text x="12" y="15" fontSize="8" fill="currentColor" textAnchor="middle" fontWeight="bold">PL</text>
                </svg>
              </button>
            </div>
