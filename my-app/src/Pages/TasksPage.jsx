@@ -248,13 +248,14 @@ export default function TasksPage() {
                         </>
                       ) : (
                         <>
-                          <button className="profile-edit-btn" title="Edit" onClick={() => startEdit(task)} aria-label={`Edit ${task.subject}`}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-                              <path d="M12 20h9" />
-                              <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
-                            </svg>
-                          </button>
-                          <button className="profile-action-btn danger task-delete-button" title="Delete" onClick={() => removeTask(task.id)} aria-label={`Delete ${task.subject}`}>
+                          {/* Removed inline Edit button per request. Center the Delete button and reuse tasks-add-button styling for consistent look. */}
+                          <button
+                            className="profile-action-btn danger task-delete-button tasks-add-button"
+                            title="Delete"
+                            onClick={() => removeTask(task.id)}
+                            aria-label={`Delete ${task.subject}`}
+                            style={{ display: 'block', margin: '0.6rem auto' }}
+                          >
                             Delete
                           </button>
                         </>
@@ -274,9 +275,22 @@ export default function TasksPage() {
 function SubtaskAdder({ onAdd }) {
   const [text, setText] = useState('');
   return (
-    <form onSubmit={(e) => { e.preventDefault(); if (!text.trim()) return; onAdd(text.trim()); setText(''); }} className="subtask-form">
-      <input value={text} onChange={e => setText(e.target.value)} placeholder="Add subtask" className="subtask-input" />
-      <button type="submit" className="tasks-add-button">Add</button>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!text.trim()) return;
+        onAdd(text.trim());
+        setText('');
+      }}
+      className="subtask-form"
+    >
+      <input
+        value={text}
+        onChange={e => setText(e.target.value)}
+        placeholder="Add subtask (press Enter to add)"
+        className="subtask-input"
+      />
+      {/* Removed the visible Add button per request; users can press Enter to submit the subtask. */}
     </form>
   );
 }
