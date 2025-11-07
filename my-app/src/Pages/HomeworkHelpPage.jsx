@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import '../Styles/Pages.css';
 
 export default function HomeworkHelpPage() {
@@ -6,7 +7,7 @@ export default function HomeworkHelpPage() {
     {
       id: 1,
       role: 'assistant',
-      content: 'Hi! I\'m your homework helper. Ask me anything about your studies, and I\'ll do my best to help you understand the concepts! 📚'
+      content: "Hi! I'm your homework helper. Ask me anything about your studies, and I'll do my best to help you understand the concepts! 📚"
     }
   ]);
   const [input, setInput] = useState('');
@@ -36,12 +37,12 @@ export default function HomeworkHelpPage() {
     setIsTyping(true);
 
     try {
-      // Build conversation history for Gemini
+      // Build conversation history
       const conversationHistory = messages
         .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
         .join('\n\n');
-      
-      const fullPrompt = `You are a helpful homework assistant. Help students understand concepts by explaining them clearly and guiding them through problems step by step. Be encouraging and educational.
+
+      const fullPrompt = `You are a helpful homework assistant. Explain concepts clearly, guide step by step, and encourage the student.
 
 Previous conversation:
 ${conversationHistory}
@@ -50,49 +51,45 @@ User: ${userMessage.content}
 
 Please respond:`;
 
-      // Call Gemini API
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      console.log('Using API key:', apiKey ? 'Key exists' : 'No key found');
+      if (!apiKey) throw new Error('No API key found. Set VITE_GEMINI_API_KEY in your .env file');
+
+      // ✅ Correct Gemini API call using generateContent endpoint
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
         {
           method: 'POST',
-          headers: {
+          headers: { 
             'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey
           },
           body: JSON.stringify({
             contents: [{
               parts: [{
                 text: fullPrompt
               }]
-            }]
+            }],
+            generationConfig: {
+              maxOutputTokens: 500
+            }
           })
         }
       );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        console.error('API Error:', response.status, errorData);
-        throw new Error(`API request failed: ${response.status}`);
+        throw new Error(`API Error: ${response.status} ${JSON.stringify(errorData)}`);
       }
 
       const data = await response.json();
-      console.log('API Response:', data);
-      const aiResponse = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: data.candidates[0].content.parts[0].text
-      };
-      
-      setMessages(prev => [...prev, aiResponse]);
-    } catch (error) {
-      console.error('Error:', error);
-      const errorResponse = {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: `Sorry, I encountered an error: ${error.message}. Please check the console for details.`
-      };
-      setMessages(prev => [...prev, errorResponse]);
+      console.log('AI Response:', data);
+
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, no response from AI.';
+
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: aiText }]);
+    } catch (err) {
+      console.error(err);
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', content: `Error: ${err.message}` }]);
     } finally {
       setIsTyping(false);
     }
@@ -103,7 +100,7 @@ Please respond:`;
       {
         id: 1,
         role: 'assistant',
-        content: 'Hi! I\'m your homework helper. Ask me anything about your studies, and I\'ll do my best to help you understand the concepts! 📚'
+        content: "Hi! I'm your homework helper. Ask me anything about your studies, and I'll do my best to help you understand the concepts! 📚"
       }
     ]);
   };
@@ -140,11 +137,17 @@ Please respond:`;
                 {message.role === 'assistant' ? '🤖' : '👤'}
               </div>
               <div className="message-content">
-                <div className="message-text">{message.content}</div>
+                <div className="message-text">
+                  {message.role === 'assistant' ? (
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  ) : (
+                    message.content
+                  )}
+                </div>
               </div>
             </div>
           ))}
-          
+
           {isTyping && (
             <div className="message assistant">
               <div className="message-avatar">🤖</div>
@@ -157,6 +160,7 @@ Please respond:`;
               </div>
             </div>
           )}
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -169,11 +173,7 @@ Please respond:`;
             onChange={(e) => setInput(e.target.value)}
             disabled={isTyping}
           />
-          <button 
-            type="submit" 
-            className="chat-send-btn"
-            disabled={!input.trim() || isTyping}
-          >
+          <button type="submit" className="chat-send-btn" disabled={!input.trim() || isTyping}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
             </svg>
