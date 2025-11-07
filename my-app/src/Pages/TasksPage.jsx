@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "../Styles/Pages.css";
 
+
 export default function TasksPage() {
   const [tasks, setTasks] = useState(() => {
     try {
@@ -21,6 +22,7 @@ export default function TasksPage() {
     }
   });
 
+
   const [newSubject, setNewSubject] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newPriority, setNewPriority] = useState("Medium");
@@ -29,6 +31,7 @@ export default function TasksPage() {
   const [editValues, setEditValues] = useState({ subject: "", description: "" });
   const [filter, setFilter] = useState("All");
 
+  // Save tasks to local storage
   useEffect(() => {
     try {
       localStorage.setItem("tasks_v1", JSON.stringify(tasks));
@@ -37,10 +40,12 @@ export default function TasksPage() {
     }
   }, [tasks]);
 
+
   function toggleDone(id) {
     setTasks(prev => prev.map(t => (t.id === id ? { ...t, done: !t.done } : t)));
   }
 
+  // Add a new task
   function addTask(e) {
     e.preventDefault();
     const subject = newSubject.trim();
@@ -61,9 +66,11 @@ export default function TasksPage() {
     setNewDueDate("");
   }
 
+  // Remove a task
   function removeTask(id) {
     setTasks(prev => prev.filter(t => t.id !== id));
   }
+
 
   function startEdit(task) {
     setEditingId(task.id);
@@ -80,6 +87,7 @@ export default function TasksPage() {
     setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...patch } : t)));
   }
 
+  // Subtasks
   function addSubtask(taskId, text) {
     if (!text) return;
     setTasks(prev => prev.map(t => {
@@ -96,13 +104,15 @@ export default function TasksPage() {
     }));
   }
 
+
   const todayISO = new Date().toISOString().slice(0,10);
+// Filter tasks
   function matchesFilter(t) {
     if (filter === 'All') return true;
     if (filter === 'Today') return t.dueDate === todayISO;
     return (t.priority || 'Medium') === filter;
   }
-
+// Render & JSX
   return (
     <div className="page tasks-page">
       <div className="hero-section tasks-hero">
@@ -272,6 +282,7 @@ export default function TasksPage() {
   );
 }
 
+// SubtaskAdder component
 function SubtaskAdder({ onAdd }) {
   const [text, setText] = useState('');
   return (
